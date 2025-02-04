@@ -14,6 +14,7 @@ function isPrime(n) {
 }
 
 function isPerfect(n) {
+    if (n < 1) return false;
     let sum = 1;
     for (let i = 2; i * i <= n; i++) {
         if (n % i === 0) {
@@ -25,6 +26,7 @@ function isPerfect(n) {
 }
 
 function isArmstrong(n) {
+    if (n < 0) return false; // Armstrong numbers only apply to positive numbers
     let sum = 0, temp = n, digits = n.toString().length;
     while (temp > 0) {
         sum += Math.pow(temp % 10, digits);
@@ -32,6 +34,17 @@ function isArmstrong(n) {
     }
     return sum === n;
 }
+
+const fetchFunFact = async (num) => {
+    try {
+        const source = axios.CancelToken.source();
+        setTimeout(() => source.cancel(), 300); // Cancel if request takes >300ms
+        const response = await axios.get(`http://numbersapi.com/${num}`, { cancelToken: source.token });
+        return response.data;
+    } catch {
+        return "No fun fact available";
+    }
+};
 
 app.get("/api/classify-number", async (req, res) => {
     const { number } = req.query;
@@ -47,31 +60,21 @@ app.get("/api/classify-number", async (req, res) => {
 
     if (isPrime(num)) properties.push("prime");
     if (isPerfect(num)) properties.push("perfect");
-    if (isArmstrong(num)) properties.push("armstrong");
+    if (num >= 0 && isArmstrong(num)) properties.push("armstrong"); // Avoid negatives
 
-    const digitSum = num.toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
+    const digitSum = Math.abs(num).toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
 
-    try {
-        const funFactResponse = await axios.get(`http://numbersapi.com/${num}`);
-        res.json({
-            number: num,
-            is_prime: isPrime(num),
-            is_perfect: isPerfect(num),
-            properties,
-            digit_sum: digitSum,
-            fun_fact: funFactResponse.data
-        });
-    } catch (error) {
-        res.json({
-            number: num,
-            is_prime: isPrime(num),
-            is_perfect: isPerfect(num),
-            properties,
-            digit_sum: digitSum,
-            fun_fact: "No fun fact available"
-        });
-    }
+    const funFact = await fetchFunFact(num);
+
+    res.json({
+        number: num,
+        is_prime: isPrime(num),
+        is_perfect: isPerfect(num),
+        properties,
+        digit_sum: digitSum,
+        fun_fact: funFact
+    });
 });
 
-const PORT = process.env.PORT || 10000;  // Use Render's provided port
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
