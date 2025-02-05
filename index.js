@@ -14,6 +14,7 @@ function isPrime(n) {
 }
 
 function isPerfect(n) {
+    if (n < 1) return false;
     let sum = 1;
     for (let i = 2; i * i <= n; i++) {
         if (n % i === 0) {
@@ -21,16 +22,17 @@ function isPerfect(n) {
             if (i !== n / i) sum += n / i;
         }
     }
-    return sum === n && n !== 1;
+    return sum === n;
 }
 
 function isArmstrong(n) {
-    let sum = 0, temp = n, digits = n.toString().length;
+    let num = Math.abs(n); // Convert negative numbers to positive
+    let sum = 0, temp = num, digits = num.toString().length;
     while (temp > 0) {
         sum += Math.pow(temp % 10, digits);
         temp = Math.floor(temp / 10);
     }
-    return sum === n;
+    return sum === num;
 }
 
 app.get("/api/classify-number", async (req, res) => {
@@ -47,12 +49,12 @@ app.get("/api/classify-number", async (req, res) => {
     }
     properties.push(num % 2 === 0 ? "even" : "odd");
 
-    const digitSum = num.toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
-    
-    let funFact = "No fun fact available";
+    // Compute digit sum using absolute value
+    const digitSum = Math.abs(num).toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
 
+    let funFact = "No fun fact available";
     try {
-        const funFactResponse = await axios.get(`http://numbersapi.com/${num}/math`);
+        const funFactResponse = await axios.get(`http://numbersapi.com/${num}/math`, { timeout: 500 });
         funFact = funFactResponse.data;
     } catch (error) {
         console.error("Numbers API error:", error.message);
