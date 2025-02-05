@@ -14,7 +14,8 @@ function isPrime(n) {
 }
 
 function isPerfect(n) {
-    if (n < 1) return false;
+    if (n === 1) return false; // Fix: 1 is NOT a perfect number
+    if (n < 1) return false; // Negative numbers can't be perfect
     let sum = 1;
     for (let i = 2; i * i <= n; i++) {
         if (n % i === 0) {
@@ -26,7 +27,7 @@ function isPerfect(n) {
 }
 
 function isArmstrong(n) {
-    let num = Math.abs(n); // Convert negative numbers to positive
+    let num = Math.abs(n); // Fix: Convert negatives to positive before checking
     let sum = 0, temp = num, digits = num.toString().length;
     while (temp > 0) {
         sum += Math.pow(temp % 10, digits);
@@ -49,7 +50,7 @@ app.get("/api/classify-number", async (req, res) => {
     }
     properties.push(num % 2 === 0 ? "even" : "odd");
 
-    // Compute digit sum using absolute value
+    // Fix: Compute digit sum using absolute value for negatives
     const digitSum = Math.abs(num).toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
 
     let funFact = "No fun fact available";
