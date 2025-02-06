@@ -7,7 +7,7 @@ app.use(cors());
 
 const factCache = {};
 
-function isPrime(n) { // isPrime function
+function isPrime(n) {
     if (n < 2) return false;
     for (let i = 2; i * i <= n; i++) {
         if (n % i === 0) return false;
@@ -15,7 +15,7 @@ function isPrime(n) { // isPrime function
     return true;
 }
 
-function isPerfect(n) { // isPerfect function
+function isPerfect(n) {
     if (n === 1) return false;
     if (n < 1) return false;
     let sum = 1;
@@ -28,7 +28,7 @@ function isPerfect(n) { // isPerfect function
     return sum === n;
 }
 
-function isArmstrong(n) { // isArmstrong function
+function isArmstrong(n) {
     let num = Math.abs(n);
     let sum = 0, temp = num, digits = num.toString().length;
     while (temp > 0) {
@@ -40,14 +40,23 @@ function isArmstrong(n) { // isArmstrong function
 
 app.get("/api/classify-number", async (req, res) => {
     const { number } = req.query;
+
+    if (number === undefined || number === "") {
+        return res.status(400).json({ number: "", error: true });
+    }
+
     const num = parseInt(number);
 
     if (isNaN(num)) {
-        return res.status(400).json({ number, error: true });
+        return res.status(400).json({ number: number, error: true });
+    }
+
+    if (!Number.isInteger(num)) {
+        return res.status(400).json({ number: number, error: true });
     }
 
     let properties = [];
-    if (isArmstrong(num)) properties.push("armstrong"); // Now isArmstrong is defined
+    if (isArmstrong(num)) properties.push("armstrong");
     properties.push(num % 2 === 0 ? "even" : "odd");
 
     const digitSum = Math.abs(num).toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
@@ -56,8 +65,8 @@ app.get("/api/classify-number", async (req, res) => {
         console.log(`Cache hit for ${num}:`, factCache[num]);
         return res.json({
             number: num,
-            is_prime: isPrime(num), // Now isPrime is defined
-            is_perfect: isPerfect(num), // Now isPerfect is defined
+            is_prime: isPrime(num),
+            is_perfect: isPerfect(num),
             properties,
             digit_sum: digitSum,
             fun_fact: factCache[num]
@@ -66,8 +75,8 @@ app.get("/api/classify-number", async (req, res) => {
         console.log(`Cache miss for ${num}. Sending initial response.`);
         res.json({
             number: num,
-            is_prime: isPrime(num), // Now isPrime is defined
-            is_perfect: isPerfect(num), // Now isPerfect is defined
+            is_prime: isPrime(num),
+            is_perfect: isPerfect(num),
             properties,
             digit_sum: digitSum,
             fun_fact: "Fetching..."
