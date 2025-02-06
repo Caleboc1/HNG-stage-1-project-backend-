@@ -8,7 +8,35 @@ app.use(cors());
 const factCache = {};
 const CACHE_DURATION = 60 * 60 * 1000; // 1 hour (adjust as needed)
 
-// ... (isPrime, isPerfect, isArmstrong functions - no changes needed)
+function isPrime(n) {
+    if (n < 2) return false;
+    for (let i = 2; i * i <= n; i++) {
+        if (n % i === 0) return false;
+    }
+    return true;
+}
+
+function isPerfect(n) {
+    if (n <= 1) return false; // Optimized: Handle 1 and negatives efficiently
+    let sum = 1;
+    for (let i = 2; i * i <= n; i++) {
+        if (n % i === 0) {
+            sum += i;
+            if (i * i !== n) sum += n / i; // Optimized: Avoid double-counting factors
+        }
+    }
+    return sum === n;
+}
+
+function isArmstrong(n) {
+    let num = Math.abs(n);
+    let sum = 0, temp = num, digits = num.toString().length;
+    while (temp > 0) {
+        sum += Math.pow(temp % 10, digits);
+        temp = Math.floor(temp / 10);
+    }
+    return sum === num;
+}
 
 app.get("/api/classify-number", async (req, res) => {
     const { number } = req.query;
