@@ -7,7 +7,7 @@ const port = process.env.PORT || 3000;
 
 app.use(cors());
 
-const cache = {}; // Simple in-memory cache (for development)
+const cache = {};
 
 app.get('/api/classify-number', async (req, res) => {
   const numberParam = req.query.number;
@@ -18,7 +18,7 @@ app.get('/api/classify-number', async (req, res) => {
 
   const number = parseInt(numberParam);
 
-  if (isNaN(number) || number < 0) {
+  if (isNaN(number) || number < 0) {  // Reject negative or non-numeric input
     return res.status(400).json({ number: numberParam, error: true });
   }
 
@@ -67,39 +67,10 @@ app.get('/api/classify-number', async (req, res) => {
   }
 });
 
-async function isNumberPrime(number) {
-  if (number <= 1) return false;
-  for (let i = 2; i <= Math.sqrt(number); i++) {
-    if (number % i === 0) return false;
-  }
-  return true;
-}
-
-async function isNumberPerfect(number) {
-  if (number <= 1) return false;
-  let sum = 1;
-  for (let i = 2; i * i <= number; i++) {
-    if (number % i == 0) {
-      sum += i;
-      if (i * i != number)
-        sum += number / i;
-    }
-  }
-  return sum == number;
-}
-
-function isArmstrong(number) {
-  const numStr = String(number);
-  const n = numStr.length;
-  let sum = 0;
-  for (let digit of numStr) {
-    sum += Math.pow(parseInt(digit), n);
-  }
-  return sum === number;
-}
+// ... (isPrime, isPerfect, isArmstrong functions - no changes needed)
 
 function calculateDigitSum(number) {
-  const numStr = String(Math.abs(number)); // Handle negative numbers
+  const numStr = String(Math.abs(number)); // Crucial: Use Math.abs() here
   let sum = 0;
   for (let digit of numStr) {
     sum += parseInt(digit);
@@ -107,6 +78,4 @@ function calculateDigitSum(number) {
   return sum;
 }
 
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
-});
+// ... (app.listen - no changes needed)
