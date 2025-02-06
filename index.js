@@ -7,7 +7,36 @@ app.use(cors());
 
 const factCache = {};
 
-// ... (isPrime, isPerfect, isArmstrong functions - no changes)
+function isPrime(n) { // isPrime function
+    if (n < 2) return false;
+    for (let i = 2; i * i <= n; i++) {
+        if (n % i === 0) return false;
+    }
+    return true;
+}
+
+function isPerfect(n) { // isPerfect function
+    if (n === 1) return false;
+    if (n < 1) return false;
+    let sum = 1;
+    for (let i = 2; i * i <= n; i++) {
+        if (n % i === 0) {
+            sum += i;
+            if (i !== n / i) sum += n / i;
+        }
+    }
+    return sum === n;
+}
+
+function isArmstrong(n) { // isArmstrong function
+    let num = Math.abs(n);
+    let sum = 0, temp = num, digits = num.toString().length;
+    while (temp > 0) {
+        sum += Math.pow(temp % 10, digits);
+        temp = Math.floor(temp / 10);
+    }
+    return sum === num;
+}
 
 app.get("/api/classify-number", async (req, res) => {
     const { number } = req.query;
@@ -18,43 +47,40 @@ app.get("/api/classify-number", async (req, res) => {
     }
 
     let properties = [];
-    if (isArmstrong(num)) properties.push("armstrong");
+    if (isArmstrong(num)) properties.push("armstrong"); // Now isArmstrong is defined
     properties.push(num % 2 === 0 ? "even" : "odd");
 
     const digitSum = Math.abs(num).toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
 
-    // Check cache *before* sending initial response
     if (factCache[num]) {
-      console.log(`Cache hit for ${num}:`, factCache[num]);  // More informative log
-      return res.json({ // Return cached data immediately
-        number: num,
-        is_prime: isPrime(num),
-        is_perfect: isPerfect(num),
-        properties,
-        digit_sum: digitSum,
-        fun_fact: factCache[num]
-      });
+        console.log(`Cache hit for ${num}:`, factCache[num]);
+        return res.json({
+            number: num,
+            is_prime: isPrime(num), // Now isPrime is defined
+            is_perfect: isPerfect(num), // Now isPerfect is defined
+            properties,
+            digit_sum: digitSum,
+            fun_fact: factCache[num]
+        });
     } else {
-      console.log(`Cache miss for ${num}. Sending initial response.`);
-      res.json({ // Return initial response with "Fetching..."
-        number: num,
-        is_prime: isPrime(num),
-        is_perfect: isPerfect(num),
-        properties,
-        digit_sum: digitSum,
-        fun_fact: "Fetching..."
-      });
+        console.log(`Cache miss for ${num}. Sending initial response.`);
+        res.json({
+            number: num,
+            is_prime: isPrime(num), // Now isPrime is defined
+            is_perfect: isPerfect(num), // Now isPerfect is defined
+            properties,
+            digit_sum: digitSum,
+            fun_fact: "Fetching..."
+        });
     }
 
-
-    // Fetch fun fact asynchronously (only if not cached)
-    if (!factCache[num]) { // Correct placement of the if condition
+    if (!factCache[num]) {
         try {
             const { data } = await axios.get(`http://numbersapi.com/${num}/math`, { timeout: 300 });
             factCache[num] = data;
-            console.log(`Fun fact fetched and cached for ${num}:`, data); // Log successful fetch
+            console.log(`Fun fact fetched and cached for ${num}:`, data);
         } catch (error) {
-            console.error(`Error fetching fun fact for ${num}:`, error.message); // More specific error message
+            console.error(`Error fetching fun fact for ${num}:`, error.message);
             factCache[num] = "No fun fact available";
         }
     }
