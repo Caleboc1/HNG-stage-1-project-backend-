@@ -5,19 +5,27 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors()); // Enable CORS for all routes
+app.use(cors());
+
+const cache = {}; // Simple in-memory cache (for development)
 
 app.get('/api/classify-number', async (req, res) => {
   const numberParam = req.query.number;
 
-  if (!numberParam) {
-    return res.status(400).json({ number: null, error: true });
+  if (numberParam === undefined) {
+    return res.status(400).json({ number: "", error: true });
   }
 
   const number = parseInt(numberParam);
 
-  if (isNaN(number)) {
+  if (isNaN(number) || number < 0) {
     return res.status(400).json({ number: numberParam, error: true });
+  }
+
+  if (cache[number]) {
+    const cachedData = cache[number];
+    console.log("Cache Hit");
+    return res.json(cachedData);
   }
 
   try {
@@ -40,21 +48,24 @@ app.get('/api/classify-number', async (req, res) => {
 
     const digitSum = calculateDigitSum(number);
 
-    res.json({
+    const responseData = {
       number: number,
       is_prime: isPrime,
       is_perfect: isPerfect,
       properties: properties,
       digit_sum: digitSum,
       fun_fact: funFact,
-    });
-  } catch (error) {
-      console.error("Error fetching fun fact:", error);
-      res.status(500).json({ number: number, error: true, message: "Error fetching fun fact" }); // More specific error handling
+    };
 
+    cache[number] = responseData;
+    console.log("Cache Miss");
+    res.json(responseData);
+
+  } catch (error) {
+    console.error("Error fetching fun fact:", error);
+    res.status(500).json({ number: number, error: true, message: "Error fetching fun fact" });
   }
 });
-
 
 async function isNumberPrime(number) {
   if (number <= 1) return false;
@@ -66,37 +77,35 @@ async function isNumberPrime(number) {
 
 async function isNumberPerfect(number) {
   if (number <= 1) return false;
-    let sum = 1;
-    for (let i = 2; i * i <= number; i++) {
-        if (number % i == 0) {
-            sum += i;
-            if (i * i != number)
-                sum += number / i;
-        }
+  let sum = 1;
+  for (let i = 2; i * i <= number; i++) {
+    if (number % i == 0) {
+      sum += i;
+      if (i * i != number)
+        sum += number / i;
     }
-    return sum == number;
+  }
+  return sum == number;
 }
 
 function isArmstrong(number) {
-    const numStr = String(number);
-    const n = numStr.length;
-    let sum = 0;
-    for (let digit of numStr) {
-        sum += Math.pow(parseInt(digit), n);
-    }
-    return sum === number;
+  const numStr = String(number);
+  const n = numStr.length;
+  let sum = 0;
+  for (let digit of numStr) {
+    sum += Math.pow(parseInt(digit), n);
+  }
+  return sum === number;
 }
 
 function calculateDigitSum(number) {
-  const numStr = String(number);
+  const numStr = String(Math.abs(number)); // Handle negative numbers
   let sum = 0;
   for (let digit of numStr) {
     sum += parseInt(digit);
   }
   return sum;
 }
-
-
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
