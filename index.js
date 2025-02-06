@@ -16,8 +16,8 @@ function isPrime(n) {
 }
 
 function isPerfect(n) {
-    if (n === 1) return false; // 1 is NOT a perfect number
-    if (n < 1) return false; // Negative numbers can't be perfect
+    if (n === 1) return false;
+    if (n < 1) return false;
     let sum = 1;
     for (let i = 2; i * i <= n; i++) {
         if (n % i === 0) {
@@ -29,7 +29,7 @@ function isPerfect(n) {
 }
 
 function isArmstrong(n) {
-    let num = Math.abs(n); // Use Math.abs for Armstrong calculation
+    let num = Math.abs(n);
     let sum = 0, temp = num, digits = num.toString().length;
     while (temp > 0) {
         sum += Math.pow(temp % 10, digits);
@@ -46,16 +46,13 @@ app.get("/api/classify-number", async (req, res) => {
         return res.status(400).json({ number, error: true });
     }
 
-    if (num < 0) {  // Reject negative input numbers
-        return res.status(400).json({ number, error: true });
-    }
-
     let properties = [];
     if (isArmstrong(num)) properties.push("armstrong");
     properties.push(num % 2 === 0 ? "even" : "odd");
 
     const digitSum = Math.abs(num).toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
 
+    // Send response immediately, fun fact will update separately
     res.json({
         number: num,
         is_prime: isPrime(num),
@@ -65,12 +62,12 @@ app.get("/api/classify-number", async (req, res) => {
         fun_fact: factCache[num] || "Fetching..."
     });
 
+    // Fetch fun fact asynchronously (only if not cached)
     if (!factCache[num]) {
         try {
-            const funFactResponse = await axios.get(`http://numbersapi.com/${num}/math`, { timeout: 500 });
-            factCache[num] = funFactResponse.data;
+            const { data } = await axios.get(`http://numbersapi.com/${num}/math`, { timeout: 300 });
+            factCache[num] = data;
         } catch (error) {
-            console.error("Numbers API error:", error.message);
             factCache[num] = "No fun fact available";
         }
     }
