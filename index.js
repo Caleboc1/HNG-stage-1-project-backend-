@@ -87,13 +87,13 @@ app.get("/api/classify-number", async (req, res) => {
         });
     }
 
-    if (!factCache[num]) {
+    if (!factCache[num]) { // This block should ONLY run on a cache miss
         try {
-            console.time(`Fetching from numbersapi.com for ${num}`); // Start timer
+            console.time(`Fetching from numbersapi.com for ${num}`);
             const { data } = await axios.get(`http://numbersapi.com/${num}/math`, { timeout: 300 });
             factCache[num] = data;
             console.log(`Fun fact fetched and cached for ${num}:`, data);
-            console.timeEnd(`Fetching from numbersapi.com for ${num}`); // End timer and log time
+            console.timeEnd(`Fetching from numbersapi.com for ${num}`);
         } catch (error) {
             console.error(`Error fetching fun fact for ${num}:`, error.message);
             factCache[num] = "No fun fact available";
