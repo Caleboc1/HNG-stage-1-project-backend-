@@ -79,3 +79,7 @@ function calculateDigitSum(number) {
 }
 
 // ... (app.listen - no changes needed)
+
+app.listen(port, () => {
+  console.log(`Server listening on port ${port}`);
+});
