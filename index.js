@@ -61,8 +61,11 @@ app.get("/api/classify-number", async (req, res) => {
 
     const digitSum = Math.abs(num).toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
 
+    console.time(`Request for ${num}`); // Start timer
+
     if (factCache[num]) {
         console.log(`Cache hit for ${num}:`, factCache[num]);
+        console.timeEnd(`Request for ${num}`); // End timer and log time
         return res.json({
             number: num,
             is_prime: isPrime(num),
@@ -73,6 +76,7 @@ app.get("/api/classify-number", async (req, res) => {
         });
     } else {
         console.log(`Cache miss for ${num}. Sending initial response.`);
+        console.timeEnd(`Request for ${num}`); // End timer and log time
         res.json({
             number: num,
             is_prime: isPrime(num),
@@ -85,9 +89,11 @@ app.get("/api/classify-number", async (req, res) => {
 
     if (!factCache[num]) {
         try {
+            console.time(`Fetching from numbersapi.com for ${num}`); // Start timer
             const { data } = await axios.get(`http://numbersapi.com/${num}/math`, { timeout: 300 });
             factCache[num] = data;
             console.log(`Fun fact fetched and cached for ${num}:`, data);
+            console.timeEnd(`Fetching from numbersapi.com for ${num}`); // End timer and log time
         } catch (error) {
             console.error(`Error fetching fun fact for ${num}:`, error.message);
             factCache[num] = "No fun fact available";
