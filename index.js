@@ -5,6 +5,8 @@ const cors = require("cors");
 const app = express();
 app.use(cors());
 
+const factCache = {}; // Cache for fun facts
+
 function isPrime(n) {
     if (n < 2) return false;
     for (let i = 2; i * i <= n; i++) {
@@ -14,7 +16,7 @@ function isPrime(n) {
 }
 
 function isPerfect(n) {
-    if (n === 1) return false; // Fix: 1 is NOT a perfect number
+    if (n === 1) return false; // 1 is NOT a perfect number
     if (n < 1) return false; // Negative numbers can't be perfect
     let sum = 1;
     for (let i = 2; i * i <= n; i++) {
@@ -27,7 +29,7 @@ function isPerfect(n) {
 }
 
 function isArmstrong(n) {
-    let num = Math.abs(n); // Fix: Convert negatives to positive before checking
+    let num = Math.abs(n);
     let sum = 0, temp = num, digits = num.toString().length;
     while (temp > 0) {
         sum += Math.pow(temp % 10, digits);
@@ -45,30 +47,32 @@ app.get("/api/classify-number", async (req, res) => {
     }
 
     let properties = [];
-    if (isArmstrong(num)) {
-        properties.push("armstrong");
-    }
+    if (isArmstrong(num)) properties.push("armstrong");
     properties.push(num % 2 === 0 ? "even" : "odd");
 
-    // Fix: Compute digit sum using absolute value for negatives
+    // Compute digit sum using absolute value
     const digitSum = Math.abs(num).toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
 
-    let funFact = "No fun fact available";
-    try {
-        const funFactResponse = await axios.get(`http://numbersapi.com/${num}/math`, { timeout: 500 });
-        funFact = funFactResponse.data;
-    } catch (error) {
-        console.error("Numbers API error:", error.message);
-    }
-
+    // Send response immediately
     res.json({
         number: num,
         is_prime: isPrime(num),
         is_perfect: isPerfect(num),
         properties,
         digit_sum: digitSum,
-        fun_fact: funFact
+        fun_fact: factCache[num] || "Fetching..."
     });
+
+    // Fetch fun fact asynchronously (only if not cached)
+    if (!factCache[num]) {
+        try {
+            const funFactResponse = await axios.get(`http://numbersapi.com/${num}/math`, { timeout: 500 });
+            factCache[num] = funFactResponse.data;
+        } catch (error) {
+            console.error("Numbers API error:", error.message);
+            factCache[num] = "No fun fact available";
+        }
+    }
 });
 
 const PORT = process.env.PORT || 10000;
