@@ -1,77 +1,74 @@
 const express = require("express");
-const axios = require("axios");
-const cors = require("cors");
+const redis = require("redis");
+const { Worker, isMainThread, parentPort, workerData } = require("worker_threads");
 
 const app = express();
-app.use(cors());
+const port = process.env.PORT || 3000;
 
-const factCache = {}; // Cache for fun facts
+// Redis client setup
+const client = redis.createClient();
+client.on("error", (err) => console.error("Redis error:", err));
 
+// Prime number check (Optimized)
 function isPrime(n) {
     if (n < 2) return false;
-    for (let i = 2; i * i <= n; i++) {
+    if (n % 2 === 0 && n !== 2) return false;
+    for (let i = 3; i * i <= n; i += 2) {
         if (n % i === 0) return false;
     }
     return true;
 }
 
-function isPerfect(n) {
-    if (n === 1) return false;
-    if (n < 1) return false;
-    let sum = 1;
-    for (let i = 2; i * i <= n; i++) {
-        if (n % i === 0) {
-            sum += i;
-            if (i !== n / i) sum += n / i;
-        }
-    }
-    return sum === n;
+// Precomputed perfect numbers
+const perfectNumbers = new Set([6, 28, 496, 8128]);
+function isPerfectNumber(n) {
+    return perfectNumbers.has(n);
 }
 
-function isArmstrong(n) {
-    let num = Math.abs(n);
-    let sum = 0, temp = num, digits = num.toString().length;
-    while (temp > 0) {
-        sum += Math.pow(temp % 10, digits);
-        temp = Math.floor(temp / 10);
-    }
-    return sum === num;
+// Compute properties in a worker thread
+function computeProperties(number) {
+    return new Promise((resolve, reject) => {
+        const worker = new Worker(__filename, { workerData: number });
+        worker.on("message", resolve);
+        worker.on("error", reject);
+    });
 }
 
-app.get("/api/classify-number", async (req, res) => {
-    const { number } = req.query;
-    const num = parseInt(number);
-
-    if (isNaN(num)) {
-        return res.status(400).json({ number, error: true });
-    }
-
-    let properties = [];
-    if (isArmstrong(num)) properties.push("armstrong");
-    properties.push(num % 2 === 0 ? "even" : "odd");
-
-    const digitSum = Math.abs(num).toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
-
-    // Send response immediately, fun fact will update separately
-    res.json({
+if (!isMainThread) {
+    const num = workerData;
+    parentPort.postMessage({
         number: num,
         is_prime: isPrime(num),
-        is_perfect: isPerfect(num),
-        properties,
-        digit_sum: digitSum,
-        fun_fact: factCache[num] || "Fetching..."
+        is_perfect: isPerfectNumber(num),
+        properties: [num % 2 === 0 ? "even" : "odd"],
+        digit_sum: Math.abs(num).toString().split("").reduce((acc, digit) => acc + parseInt(digit), 0),
+    });
+} else {
+    // API Endpoint
+    app.get("/api/classify-number", async (req, res) => {
+        const { number } = req.query;
+        if (!number || isNaN(number)) {
+            return res.status(400).json({ error: true, number });
+        }
+        const num = parseInt(number);
+
+        // Check cache first
+        client.get(number, async (err, cachedData) => {
+            if (cachedData) {
+                return res.json(JSON.parse(cachedData));
+            }
+            
+            try {
+                const result = await computeProperties(num);
+                client.setex(number, 3600, JSON.stringify(result)); // Cache for 1 hour
+                res.json(result);
+            } catch (error) {
+                res.status(500).json({ error: "Internal Server Error" });
+            }
+        });
     });
 
-    // Fetch fun fact asynchronously (only if not cached)
-    if (!factCache[num]) {
-        try {
-            const { data } = await axios.get(`http://numbersapi.com/${num}/math`, { timeout: 300 });
-            factCache[num] = data;
-        } catch (error) {
-            factCache[num] = "No fun fact available";
-        }
-    }
-});
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    app.listen(port, () => {
+        console.log(`Server running on port ${port}`);
+    });
+}
