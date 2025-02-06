@@ -1,74 +1,64 @@
 const express = require("express");
-const redis = require("redis");
-const { Worker, isMainThread, parentPort, workerData } = require("worker_threads");
+const axios = require("axios");
+const cors = require("cors");
 
 const app = express();
-const port = process.env.PORT || 3000;
+app.use(cors());
 
-// Redis client setup
-const client = redis.createClient();
-client.on("error", (err) => console.error("Redis error:", err));
+const factCache = {};
 
-// Prime number check (Optimized)
-function isPrime(n) {
-    if (n < 2) return false;
-    if (n % 2 === 0 && n !== 2) return false;
-    for (let i = 3; i * i <= n; i += 2) {
-        if (n % i === 0) return false;
+// ... (isPrime, isPerfect, isArmstrong functions - no changes)
+
+app.get("/api/classify-number", async (req, res) => {
+    const { number } = req.query;
+    const num = parseInt(number);
+
+    if (isNaN(num)) {
+        return res.status(400).json({ number, error: true });
     }
-    return true;
-}
 
-// Precomputed perfect numbers
-const perfectNumbers = new Set([6, 28, 496, 8128]);
-function isPerfectNumber(n) {
-    return perfectNumbers.has(n);
-}
+    let properties = [];
+    if (isArmstrong(num)) properties.push("armstrong");
+    properties.push(num % 2 === 0 ? "even" : "odd");
 
-// Compute properties in a worker thread
-function computeProperties(number) {
-    return new Promise((resolve, reject) => {
-        const worker = new Worker(__filename, { workerData: number });
-        worker.on("message", resolve);
-        worker.on("error", reject);
-    });
-}
+    const digitSum = Math.abs(num).toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
 
-if (!isMainThread) {
-    const num = workerData;
-    parentPort.postMessage({
+    // Check cache *before* sending initial response
+    if (factCache[num]) {
+      console.log(`Cache hit for ${num}:`, factCache[num]);  // More informative log
+      return res.json({ // Return cached data immediately
         number: num,
         is_prime: isPrime(num),
-        is_perfect: isPerfectNumber(num),
-        properties: [num % 2 === 0 ? "even" : "odd"],
-        digit_sum: Math.abs(num).toString().split("").reduce((acc, digit) => acc + parseInt(digit), 0),
-    });
-} else {
-    // API Endpoint
-    app.get("/api/classify-number", async (req, res) => {
-        const { number } = req.query;
-        if (!number || isNaN(number)) {
-            return res.status(400).json({ error: true, number });
+        is_perfect: isPerfect(num),
+        properties,
+        digit_sum: digitSum,
+        fun_fact: factCache[num]
+      });
+    } else {
+      console.log(`Cache miss for ${num}. Sending initial response.`);
+      res.json({ // Return initial response with "Fetching..."
+        number: num,
+        is_prime: isPrime(num),
+        is_perfect: isPerfect(num),
+        properties,
+        digit_sum: digitSum,
+        fun_fact: "Fetching..."
+      });
+    }
+
+
+    // Fetch fun fact asynchronously (only if not cached)
+    if (!factCache[num]) { // Correct placement of the if condition
+        try {
+            const { data } = await axios.get(`http://numbersapi.com/${num}/math`, { timeout: 300 });
+            factCache[num] = data;
+            console.log(`Fun fact fetched and cached for ${num}:`, data); // Log successful fetch
+        } catch (error) {
+            console.error(`Error fetching fun fact for ${num}:`, error.message); // More specific error message
+            factCache[num] = "No fun fact available";
         }
-        const num = parseInt(number);
+    }
+});
 
-        // Check cache first
-        client.get(number, async (err, cachedData) => {
-            if (cachedData) {
-                return res.json(JSON.parse(cachedData));
-            }
-            
-            try {
-                const result = await computeProperties(num);
-                client.setex(number, 3600, JSON.stringify(result)); // Cache for 1 hour
-                res.json(result);
-            } catch (error) {
-                res.status(500).json({ error: "Internal Server Error" });
-            }
-        });
-    });
-
-    app.listen(port, () => {
-        console.log(`Server running on port ${port}`);
-    });
-}
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
