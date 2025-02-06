@@ -16,13 +16,12 @@ function isPrime(n) {
 }
 
 function isPerfect(n) {
-    if (n === 1) return false;
-    if (n < 1) return false;
+    if (n <= 1) return false; // Optimized: Handle 1 and negatives efficiently
     let sum = 1;
     for (let i = 2; i * i <= n; i++) {
         if (n % i === 0) {
             sum += i;
-            if (i !== n / i) sum += n / i;
+            if (i * i !== n) sum += n / i; // Optimized: Avoid double-counting factors
         }
     }
     return sum === n;
@@ -61,11 +60,11 @@ app.get("/api/classify-number", async (req, res) => {
 
     const digitSum = Math.abs(num).toString().split("").reduce((sum, d) => sum + parseInt(d), 0);
 
-    console.time(`Request for ${num}`); // Start timer
+    console.time(`Request for ${num}`);
 
     if (factCache[num]) {
         console.log(`Cache hit for ${num}:`, factCache[num]);
-        console.timeEnd(`Request for ${num}`); // End timer and log time
+        console.timeEnd(`Request for ${num}`);
         return res.json({
             number: num,
             is_prime: isPrime(num),
@@ -76,7 +75,7 @@ app.get("/api/classify-number", async (req, res) => {
         });
     } else {
         console.log(`Cache miss for ${num}. Sending initial response.`);
-        console.timeEnd(`Request for ${num}`); // End timer and log time
+        console.timeEnd(`Request for ${num}`);
         res.json({
             number: num,
             is_prime: isPrime(num),
@@ -87,7 +86,7 @@ app.get("/api/classify-number", async (req, res) => {
         });
     }
 
-    if (!factCache[num]) { // This block should ONLY run on a cache miss
+    if (!factCache[num]) {
         try {
             console.time(`Fetching from numbersapi.com for ${num}`);
             const { data } = await axios.get(`http://numbersapi.com/${num}/math`, { timeout: 300 });
