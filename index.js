@@ -63,7 +63,7 @@ app.get("/api/classify-number", async (req, res) => {
 
     console.time(`Request for ${num}`);
 
-    // Check cache with timestamp
+    // Check cache with timestamp (but return "Fetching..." immediately)
     if (factCache[num] && (Date.now() - factCache[num].timestamp < CACHE_DURATION)) {
         console.log(`Cache hit for ${num}:`, factCache[num].data);
         console.timeEnd(`Request for ${num}`);
