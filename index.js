@@ -18,7 +18,7 @@ app.get('/api/classify-number', async (req, res) => {
 
   const number = parseInt(numberParam);
 
-  if (isNaN(number) || number < 0) {  // Reject negative or non-numeric input
+  if (isNaN(number) || number < 0) {
     return res.status(400).json({ number: numberParam, error: true });
   }
 
@@ -34,12 +34,11 @@ app.get('/api/classify-number', async (req, res) => {
 
     const isPrime = await isNumberPrime(number);
     const isPerfect = await isNumberPerfect(number);
-    const properties = [];
 
+    const properties = [];
     if (isArmstrong(number)) {
       properties.push("armstrong");
     }
-
     if (number % 2 === 0) {
       properties.push("even");
     } else {
@@ -62,23 +61,50 @@ app.get('/api/classify-number', async (req, res) => {
     res.json(responseData);
 
   } catch (error) {
-    console.error("Error fetching fun fact:", error);
-    res.status(500).json({ number: number, error: true, message: "Error fetching fun fact" });
+    console.error("Error fetching fun fact or processing:", error);
+    res.status(500).json({ number: number, error: true, message: "An error occurred" });
   }
 });
 
-// ... (isPrime, isPerfect, isArmstrong functions - no changes needed)
+async function isNumberPrime(number) {
+  if (number <= 1) return false;
+  for (let i = 2; i <= Math.sqrt(number); i++) {
+    if (number % i === 0) return false;
+  }
+  return true;
+}
+
+async function isNumberPerfect(number) {
+    if (number <= 1) return false;
+    let sum = 1;
+    for (let i = 2; i * i <= number; i++) {
+        if (number % i == 0) {
+            sum += i;
+            if (i * i != number)
+                sum += number / i;
+        }
+    }
+    return sum == number;
+}
+
+function isArmstrong(number) {
+  const numStr = String(number);
+  const n = numStr.length;
+  let sum = 0;
+  for (let digit of numStr) {
+    sum += Math.pow(parseInt(digit), n);
+  }
+  return sum === number;
+}
 
 function calculateDigitSum(number) {
-  const numStr = String(Math.abs(number)); // Crucial: Use Math.abs() here
+  const numStr = String(Math.abs(number));
   let sum = 0;
   for (let digit of numStr) {
     sum += parseInt(digit);
   }
   return sum;
 }
-
-// ... (app.listen - no changes needed)
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
