@@ -6,5 +6,8 @@
     "express": "^4.21.2",
     "ioredis": "^5.4.2",
     "workerpool": "^9.2.0"
+  },
+  "scripts": {
+    "start": "node index.js"  
   }
 }
